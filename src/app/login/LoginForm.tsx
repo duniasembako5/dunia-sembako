@@ -48,12 +48,14 @@ export function LoginForm({
     >
       <Card className="w-full rounded-2xl border border-gray-200 bg-white/80 shadow-xl backdrop-blur-sm">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white shadow-md"></div>
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white shadow-md">
+            DS
+          </div>
           <CardTitle className="text-xl font-semibold text-gray-800">
-            Selamat Datang Kembali
+            Selamat Datang di Dunia Sembako
           </CardTitle>
           <CardDescription className="text-gray-500">
-            Masukkan kredensial Anda untuk mengakses dashboard
+            Kepuasan dan kepercayaan pelanggan adalah prioritas kami
           </CardDescription>
         </CardHeader>
 
@@ -82,7 +84,7 @@ export function LoginForm({
               </Field>
 
               {/* Password */}
-              <Field>
+              <Field className="relative">
                 <FieldLabel htmlFor="password" className="text-gray-700">
                   Password
                 </FieldLabel>
@@ -91,9 +93,10 @@ export function LoginForm({
                   name="password"
                   type="password"
                   placeholder="Masukkan password"
-                  className="rounded-2xl placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                  className="rounded-2xl pr-10 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
                   disabled={loading}
                 />
+
                 {state?.errors?.password && (
                   <p className="mt-1 text-sm text-red-500">
                     {Array.isArray(state.errors.password)
@@ -119,7 +122,7 @@ export function LoginForm({
       </Card>
 
       <p className="mt-6 text-sm text-white">
-        © {new Date().getFullYear()} Your Company. Semua hak dilindungi.
+        © {new Date().getFullYear()} Dunia Sembako Mart
       </p>
     </div>
   );

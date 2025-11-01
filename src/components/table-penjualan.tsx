@@ -38,6 +38,7 @@ import { toGMT7 } from "@/lib/formatDbDate";
 type TransactionDetail = {
   nama_barang: string;
   quantity: number;
+  satuan: string;
   harga_jual: number;
 };
 
@@ -47,6 +48,7 @@ type Transaction = {
   admin_name: string;
   created_at: string;
   total_harga: string;
+  tunai: string;
   details: TransactionDetail[];
 };
 

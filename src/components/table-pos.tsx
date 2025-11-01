@@ -55,12 +55,14 @@ export function TablePOS() {
 
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [keterangan, setKeterangan] = useState("");
+
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction>({
     id_transaksi: "",
     keterangan: "",
     admin_name: "",
     created_at: "",
     total_harga: "",
+    tunai: "",
     details: [],
   });
 
@@ -130,7 +132,7 @@ export function TablePOS() {
       if (/^[0-9a-zA-Z]$/.test(e.key)) {
         buffer += e.key;
         clearTimeout(timer);
-        timer = setTimeout(() => (buffer = ""), 300);
+        timer = setTimeout(() => (buffer = ""), 100);
       }
     };
 
@@ -195,6 +197,16 @@ export function TablePOS() {
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
+    onAfterPrint: () => {
+      setKeterangan("");
+      setSelectedTransaction((prev) => ({
+        ...prev,
+        tunai: "",
+      }));
+
+      // (Opsional) tutup modal submit jika masih terbuka
+      setIsSubmitOpen(false);
+    },
   });
 
   const handleTransaksi = async () => {
@@ -211,6 +223,7 @@ export function TablePOS() {
           quantity: b.quantity,
         })),
         keterangan,
+        tunai: selectedTransaction?.tunai.replace(/\./g, ""),
       };
 
       const res = await fetch("/api/transaksi", {
@@ -237,7 +250,7 @@ export function TablePOS() {
       // Auto-print setelah sedikit delay (render dulu)
       setTimeout(() => {
         handlePrint();
-      }, 200);
+      }, 100);
     } catch (err) {
       console.error(err instanceof Error ? err.message : err);
       showError(
@@ -440,8 +453,76 @@ export function TablePOS() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* === Input Uang Tunai === */}
+          <div className="mt-4 space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Uang Tunai
+            </label>
+            <input
+              className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              value={selectedTransaction.tunai}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, ""); // ambil angka murni
+                const num = parseInt(raw || "0", 10);
+                setSelectedTransaction({
+                  ...selectedTransaction,
+                  tunai: raw === "" ? "" : num.toLocaleString("id-ID"),
+                }); // tampilan tetap berformat ribuan
+              }}
+              placeholder="Masukkan jumlah uang tunai"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const uang =
+                    parseInt(
+                      selectedTransaction.tunai.replace(/\./g, ""),
+                      10,
+                    ) || 0;
+
+                  if (!selectedTransaction.tunai.trim()) {
+                    showInfo("Masukkan jumlah uang tunai terlebih dahulu");
+                    return;
+                  }
+
+                  if (uang < totalHarga) {
+                    showError(
+                      "Uang tunai tidak mencukupi untuk total pembayaran",
+                    );
+                    return;
+                  }
+
+                  handleTransaksi();
+                  setIsSubmitOpen(false);
+                }
+              }}
+            />
+
+            {/* Menampilkan kembalian otomatis */}
+            {selectedTransaction.tunai && (
+              <p className="mt-0 text-sm">
+                {parseInt(selectedTransaction.tunai.replace(/\./g, ""), 10) >=
+                totalHarga ? (
+                  <>
+                    Kembalian:{" "}
+                    <span className="font-semibold text-green-600">
+                      Rp{" "}
+                      {(
+                        parseInt(
+                          selectedTransaction.tunai.replace(/\./g, ""),
+                          10,
+                        ) - totalHarga
+                      ).toLocaleString("id-ID")}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-red-600">Uang tidak cukup</span>
+                )}
+              </p>
+            )}
+          </div>
+
           {/* Tambahan input keterangan */}
-          <div className="mt-3 space-y-2">
+          <div className="mt-0 space-y-2">
             <label className="text-sm font-medium text-gray-700">
               Keterangan (opsional)
             </label>
@@ -454,6 +535,24 @@ export function TablePOS() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
+                  const uang =
+                    parseInt(
+                      selectedTransaction.tunai.replace(/\./g, ""),
+                      10,
+                    ) || 0;
+
+                  if (!selectedTransaction.tunai.trim()) {
+                    showInfo("Masukkan jumlah uang tunai terlebih dahulu");
+                    return;
+                  }
+
+                  if (uang < totalHarga) {
+                    showError(
+                      "Uang tunai tidak mencukupi untuk total pembayaran",
+                    );
+                    return;
+                  }
+
                   handleTransaksi();
                   setIsSubmitOpen(false);
                 }
@@ -468,6 +567,22 @@ export function TablePOS() {
             <Button
               variant="main"
               onClick={() => {
+                const uang =
+                  parseInt(selectedTransaction.tunai.replace(/\./g, ""), 10) ||
+                  0;
+
+                if (!selectedTransaction.tunai.trim()) {
+                  showInfo("Masukkan jumlah uang tunai terlebih dahulu");
+                  return;
+                }
+
+                if (uang < totalHarga) {
+                  showError(
+                    "Uang tunai tidak mencukupi untuk total pembayaran",
+                  );
+                  return;
+                }
+
                 handleTransaksi();
                 setIsSubmitOpen(false);
               }}

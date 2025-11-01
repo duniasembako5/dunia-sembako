@@ -3,8 +3,8 @@ import "./globals.css";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Toko Kelontong",
-  description: "Aplikasi kasir",
+  title: "Dunia Sembako",
+  description: "Aplikasi kasir dunia sembako",
 };
 
 export default function RootLayout({

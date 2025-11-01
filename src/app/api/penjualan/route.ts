@@ -17,6 +17,7 @@ export async function GET(req: Request) {
             json_build_object(
               'nama_barang', b.nama_barang,
               'quantity', bt.quantity,
+              'satuan', b.satuan,
               'harga_jual', bt.harga_jual
             )
           ) AS details,
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
       SELECT
         t.id_transaksi,
         t.keterangan,
+        t.tunai,
         a.name AS admin_name,
         t.created_at,
         COALESCE(td.total_harga, 0) AS total_harga,

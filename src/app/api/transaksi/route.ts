@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { items, keterangan } = body;
+  const { items, keterangan, tunai } = body;
 
   if (!items || items.length === 0) {
     return NextResponse.json(
@@ -33,10 +33,10 @@ export async function POST(req: Request) {
     // 🧾 1️⃣ Buat transaksi utama
     await client.query(
       `
-      INSERT INTO public.transaksi (id_transaksi, admin_id, keterangan, created_at)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO public.transaksi (id_transaksi, admin_id, keterangan, tunai, created_at)
+      VALUES ($1, $2, $3, $4, $5)
       `,
-      [id_transaksi, user.id, keterangan || "", tanggal],
+      [id_transaksi, user.id, keterangan || "", tunai, tanggal],
     );
 
     const itemsDetail = [];
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       // 🔍 Ambil data harga & stok barang (FOR UPDATE agar aman)
       const { rows } = await client.query(
         `
-        SELECT nama_barang, harga_jual, stok 
+        SELECT nama_barang, harga_jual, stok, satuan
         FROM public.barang 
         WHERE id_barang = $1 
         FOR UPDATE
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         throw new Error(`Barang dengan ID ${item.id_barang} tidak ditemukan.`);
       }
 
-      const { nama_barang, harga_jual, stok } = rows[0];
+      const { nama_barang, harga_jual, stok, satuan } = rows[0];
 
       // 🚫 Cegah stok negatif
       if (stok < item.quantity) {
@@ -97,6 +97,7 @@ export async function POST(req: Request) {
         nama_barang,
         quantity: item.quantity,
         harga_jual,
+        satuan,
         subtotal: item.quantity * harga_jual,
       });
     }
@@ -116,6 +117,7 @@ export async function POST(req: Request) {
         admin_name: user.name,
         created_at: tanggal,
         total_harga,
+        tunai,
         details: itemsDetail,
       },
     });
