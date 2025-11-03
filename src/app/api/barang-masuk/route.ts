@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     // 🔹 Query utama dengan filter pencarian
     const query = `
       SELECT 
+        bm.id_barang_masuk,
         bm.barang_id,
         b.kode_barang,
         b.nama_barang,
@@ -73,5 +74,87 @@ export async function GET(req: Request) {
       { error: "Gagal mengambil data barang masuk" },
       { status: 500 },
     );
+  }
+}
+
+export async function DELETE(req: Request) {
+  const client = await pool.connect();
+
+  try {
+    const { id_barang_masuk } = await req.json();
+
+    if (!id_barang_masuk) {
+      return NextResponse.json(
+        { success: false, message: "ID barang masuk wajib diisi" },
+        { status: 400 },
+      );
+    }
+
+    await client.query("BEGIN");
+
+    // 1️⃣ ambil data barang_masuk (biar tahu barang_id & quantity)
+    const result = await client.query(
+      `SELECT barang_id, quantity FROM public.barang_masuk WHERE id_barang_masuk = $1`,
+      [id_barang_masuk],
+    );
+
+    if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return NextResponse.json(
+        { success: false, message: "Data barang masuk tidak ditemukan" },
+        { status: 404 },
+      );
+    }
+
+    const { barang_id, quantity } = result.rows[0];
+
+    // 2️⃣ ambil stok lama dari tabel barang
+    const stokResult = await client.query(
+      "SELECT stok FROM public.barang WHERE id_barang = $1",
+      [barang_id],
+    );
+
+    if (stokResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return NextResponse.json(
+        { success: false, message: "Barang tidak ditemukan" },
+        { status: 404 },
+      );
+    }
+
+    const stokLama = parseFloat(stokResult.rows[0].stok);
+    const stokBaru = stokLama - parseFloat(quantity);
+
+    // 3️⃣ update stok barang (kurangi kembali)
+    await client.query(
+      "UPDATE public.barang SET stok = $1, updated_at = NOW() WHERE id_barang = $2",
+      [stokBaru, barang_id],
+    );
+
+    // 4️⃣ hapus data barang_masuk
+    await client.query(
+      `DELETE FROM public.barang_masuk WHERE id_barang_masuk = $1`,
+      [id_barang_masuk],
+    );
+
+    await client.query("COMMIT");
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Barang masuk dibatalkan & stok dikembalikan",
+        stok_baru: stokBaru,
+      },
+      { status: 200 },
+    );
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("DELETE error:", err instanceof Error ? err.message : err);
+    return NextResponse.json(
+      { success: false, message: "Gagal menghapus barang masuk" },
+      { status: 500 },
+    );
+  } finally {
+    client.release();
   }
 }

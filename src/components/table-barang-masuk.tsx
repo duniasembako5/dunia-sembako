@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { showError } from "@/lib/sonner-notification";
+import { showError, showSuccess } from "@/lib/sonner-notification";
 import {
   ColumnDef,
   flexRender,
@@ -27,6 +27,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toGMT7 } from "@/lib/formatDbDate";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 
 type BarangMasuk = {
   barang_id: string;
@@ -35,6 +44,7 @@ type BarangMasuk = {
   admin_name: string;
   quantity: string;
   created_at: string;
+  id_barang_masuk: string;
 };
 
 type ApiResponse = {
@@ -57,6 +67,11 @@ export function TableBarangMasuk() {
     pageIndex: 0,
     pageSize: 10,
   });
+
+  // === Delete confirmation ===
+  const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [selected, setSelected] = React.useState<BarangMasuk | null>(null);
 
   // 🕐 debounce search
   React.useEffect(() => {
@@ -89,6 +104,36 @@ export function TableBarangMasuk() {
     }
   };
 
+  const handleDeleteConfirm = (barang: BarangMasuk) => {
+    setSelected(barang);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selected) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/barang-masuk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_barang_masuk: selected.id_barang_masuk }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Gagal menghapus kategori");
+
+      showSuccess("Data berhasil dihapus");
+      fetchData();
+    } catch (err) {
+      showError(
+        err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus",
+      );
+    } finally {
+      setIsDeleteOpen(false);
+      setSelected(null);
+      setDeleting(false);
+    }
+  };
+
   const columns: ColumnDef<BarangMasuk>[] = [
     {
       header: "No",
@@ -113,6 +158,24 @@ export function TableBarangMasuk() {
       accessorKey: "created_at",
       header: "Tanggal",
       cell: ({ getValue }) => <span>{toGMT7(getValue() as string)}</span>,
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row }) => {
+        const category = row.original;
+        return (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => handleDeleteConfirm(category)}
+            >
+              Batalkan
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -255,6 +318,32 @@ export function TableBarangMasuk() {
           </Select>
         </div>
       </div>
+
+      {/* === Delete Confirmation === */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Batalkan Barang Masuk</DialogTitle>
+            <DialogDescription>
+              Apakah kamu yakin ingin membatalkan{" "}
+              <b>{selected?.nama_barang || "barang ini"}</b>?
+              {" jumlah stok akan dikembalikan ke kondisi awal."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Tidak</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Membatalkan..." : "Batalkan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
