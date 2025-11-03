@@ -119,13 +119,16 @@ export function TableBarangMasuk() {
         body: JSON.stringify({ id_barang_masuk: selected.id_barang_masuk }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Gagal menghapus kategori");
+      if (!res.ok)
+        throw new Error(result.error || "Gagal membatalkan barang masuk");
 
-      showSuccess("Data berhasil dihapus");
+      showSuccess("Data berhasil dibatalkan");
       fetchData();
     } catch (err) {
       showError(
-        err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus",
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat membatalkan",
       );
     } finally {
       setIsDeleteOpen(false);
